@@ -47,9 +47,21 @@ class Server:
             if len(self.players) == 2 and self.message == "get_data":
                 continue
             elif len(self.players) == 2:
-                num_to_guess = self.server.recv(2048).decode('utf-8')
-                print(num_to_guess)
-                break
+                while True:
+                    self.number = self.server.recv(2048).decode('utf-8')
+                    self.game.reset_attributes(self.number)
+                    self.guess = None
+                    self.server.sendto('True'.encode('utf-8'), self.players[1])
+                    while not self.number == self.guess:
+                        self.guess = self.server.recv(2048).decode('utf-8')
+                        check_on_correctness = str(self.game.guess(self.guess)).encode('utf-8')
+                        self.server.sendto(check_on_correctness, self.players[0])
+                        self.server.sendto(check_on_correctness, self.players[1])
+                    self.players[0], self.players[1] = self.players[1], self.players[0]
+                    print(self.players)
+                    self.server.sendto('1,2'.encode('utf-8'), self.players[0])
+                    self.server.sendto('2,2'.encode('utf-8'), self.players[1])
+                    # break
 
         self.server.close()
 

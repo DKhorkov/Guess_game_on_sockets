@@ -11,6 +11,7 @@ class Game:
 
     def guess(self, guessed_num):
         if guessed_num != self.number:
+            self.attempt -= 1
             return False
         else:
             return True
