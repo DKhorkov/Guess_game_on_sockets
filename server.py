@@ -1,14 +1,14 @@
 import socket
 from game import Game
-from time import sleep
+import pickle
 
 
 class Server:
 
-    def __init__(self, address, port):
+    def __init__(self, address: str, port: int, max_number: int):
         self.address = address
         self.port = port
-        self.game = Game()
+        self.game = Game(max_number)
         self.players = []
         self.number = None
         self.guess = None
@@ -35,19 +35,21 @@ class Server:
         игрок угадал число, уведомляем игроков об этом и меняем их местами (1 становится 2, а 2 становится 1) и
         уведомляем об этом. Затем игра повторяется."""
         while True:
-            self.number = self.server.recv(2048).decode('utf-8')
+            self.number = pickle.loads(self.server.recv(2048))
             self.game.reset_attributes(self.number)
-            self.guess = None
-            self.server.sendto('True'.encode('utf-8'), self.players[1])
-            while not self.number == self.guess:
-                self.guess = self.server.recv(2048).decode('utf-8')
-                check_on_correctness = str(self.game.guess(self.guess)).encode('utf-8')
+            self.guess = 0
+            self.server.sendto(pickle.dumps('True'), self.players[1])
+
+            while not self.number == self.guess and self.game.attempts > 0:
+                self.guess = pickle.loads(self.server.recv(2048))
+                check_on_correctness = pickle.dumps(self.game.guess(self.guess))
                 self.server.sendto(check_on_correctness, self.players[0])
                 self.server.sendto(check_on_correctness, self.players[1])
+
             self.players[0], self.players[1] = self.players[1], self.players[0]
             print(self.players)
-            self.server.sendto('1,2'.encode('utf-8'), self.players[0])
-            self.server.sendto('2,2'.encode('utf-8'), self.players[1])
+            self.server.sendto(pickle.dumps((1, 2)), self.players[0])
+            self.server.sendto(pickle.dumps((2, 2)), self.players[1])
 
     def main(self):
         """Основной метод серверной части приложения. Создается сервер, затем в цикле начинаем принимать сообщения от
@@ -60,15 +62,15 @@ class Server:
             self.check_client_on_existence(self.client_addr)
 
             self.client_id = self.client_addr[1]
-            if self.message.decode('utf-8') == '__join_server':
+            if pickle.loads(self.message) == '__join_server':
                 print(f'Client{self.client_id} has joined the chat!')
 
             if len(self.players) == 1:
-                self.server.sendto('1,1'.encode('utf-8'), self.players[0])
+                self.server.sendto(pickle.dumps((1, 1)), self.players[0])
                 continue
             elif len(self.players) == 2 and self.send_num:
-                self.server.sendto('1,2'.encode('utf-8'), self.players[0])
-                self.server.sendto('2,2'.encode('utf-8'), self.players[1])
+                self.server.sendto(pickle.dumps((1, 2)), self.players[0])
+                self.server.sendto(pickle.dumps((2, 2)), self.players[1])
                 self.send_num = False
                 continue
 
@@ -82,5 +84,5 @@ class Server:
 
 
 if __name__ == '__main__':
-    server = Server('', 5001)
+    server = Server('', 5001, 100)
     server.main()
