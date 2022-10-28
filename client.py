@@ -28,7 +28,6 @@ class Client:
         while True:
             print('\nWaiting for 2nd player to guess the number...')
             message = pickle.loads(self.client.recv(2048))
-            print(message)
             if message[0] == 'True':
                 if message[1] > 0:
                     print(f'\nAnother player guessed the num in {5 - message[1]} attempts. U lost...')
@@ -37,7 +36,7 @@ class Client:
                 self.player_number, self.number_of_players, self.max_number = pickle.loads(self.client.recv(2048))
                 print("Now u'r player 2!\n")
                 break
-            print(f"Second player didn't guess the correct num. He thought, it was {message[3]} and now"
+            print(f"Second player didn't guess the correct num. He thought, it was {message[3]} and now "
                   f"has {message[1]} attempts!\n")
 
     def p2_cycle(self):
@@ -99,5 +98,5 @@ class Client:
 
 
 if __name__ == '__main__':
-    client = Client('', 5001)
+    client = Client('192.168.0.108', 5001)
     client.main()

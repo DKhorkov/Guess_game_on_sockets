@@ -10,7 +10,7 @@ class Server:
         self.port = port
         self.max_number = max_number
         self.attempts = attempts
-        self.game = Game()
+        self.game = Game(attempts)
         self.players = []
         self.number = None
         self.guess = None
@@ -91,5 +91,5 @@ class Server:
 
 
 if __name__ == '__main__':
-    server = Server('', 5001, 100, 3)
+    server = Server('192.168.0.108', 5001, 100, 5)
     server.main()

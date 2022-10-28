@@ -1,6 +1,7 @@
 class Game:
 
-    def __init__(self):
+    def __init__(self, attempts):
+        self.max_attempts = attempts
         self.number = None
         self.attempts = None
 
@@ -41,10 +42,10 @@ class Game:
         if guessed_num != self.number and self.attempts > 0:
             annotation = self.check_range(self.number, guessed_num)
             return 'False', self.attempts, annotation, guessed_num
-        elif self.attempts < 0:
+        elif self.attempts <= 0:
             annotation = f'You lost because you used up all your attempts! The number was {self.number}!'
             return 'True', self.attempts, annotation, guessed_num
         else:
-            annotation = f'Congratulations, you won in {5 - self.attempts} attempts by guessing the number ' \
-                         f'{self.number}, conceived by the first player!'
+            annotation = f'Congratulations, you won in {self.max_attempts - self.attempts} attempts by guessing the ' \
+                         f'number {self.number}, conceived by the first player!'
             return 'True', self.attempts, annotation, guessed_num
