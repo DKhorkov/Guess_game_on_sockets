@@ -20,9 +20,10 @@ class Client:
         self.client.connect((self.address, self.port))
 
     def p1_cycle(self):
-        """Loop for the first player. He guesses a number and sends it to the server. Then waits for the second player
-        trying to guess the number. If he guesses, we get a positive response from the server -> change places
-        with the second player. If the answer is negative, we wait for the next attempt from the second player."""
+        """Loop for the first player. The first player conceives a number and sends it to the server. Then the first
+        player waits for the second player trying to guess the number. If second player guesses the number, the first
+        player will get a positive response from the server -> change places with the second player. If the answer is
+        negative, the first player waits for the next attempt from the second player."""
 
         while True:
             print('\nWaiting for 2nd player to guess the number...')
@@ -40,9 +41,10 @@ class Client:
                   f"has {message[1]} attempts!\n")
 
     def p2_cycle(self):
-        """Loop for the second player. He tries to guess the number guessed by the first player and sends it to the
-        server. Then waits for a response from the server. If the answer is positive, then the second player won ->
-        Wait for a response from the server, to change places. If the answer is yes, we try to guess again."""
+        """Loop for the second player. The second player tries to guess the number conceived by the first player and
+        sends it to the server. Then the second player waits for a response from the server. If the answer is positive,
+        then the second player won -> wait for a response from the server, to change places. If the answer is negative,
+        the second player tries to guess again."""
 
         while True:
             guess = pickle.dumps(self.check_input(input('Guess num: ')))
@@ -56,8 +58,8 @@ class Client:
             print(f'\n{message[2]}')
 
     def check_input(self, user_input: str) -> int:
-        """This method checks the user's input for the validity of the data format (only integers in valid
-        range from zero to the maximum number specified when the server was created."""
+        """This method checks the user's input for the validity of the data format: only integers in valid in
+        range from zero to the maximum number, specified when the server was created."""
 
         while not user_input.isdecimal():
             user_input = input(f'U made mistake. U should enter an integer number between 0 and {self.max_number} '

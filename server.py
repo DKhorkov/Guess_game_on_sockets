@@ -5,10 +5,11 @@ import pickle
 
 class Server:
 
-    def __init__(self, address: str, port: int, max_number: int):
+    def __init__(self, address: str, port: int, max_number: int, attempts: int):
         self.address = address
         self.port = port
         self.max_number = max_number
+        self.attempts = attempts
         self.game = Game()
         self.players = []
         self.number = None
@@ -16,8 +17,8 @@ class Server:
         self.send_num = True
 
     def check_client_on_existence(self, client_addr):
-        """The function checks if the player is in the list of players. If the player is new, then he is added to the
-        list and information this is displayed in the server console."""
+        """The function checks if the player is in the list of players. If the player is new, then it will be added to
+        the list and information about it will be displayed in the server console."""
 
         if client_addr not in self.players:
             self.players.append(client_addr)
@@ -32,15 +33,16 @@ class Server:
         print(f'Server with address "{self.address}" and port "{self.port}" is running and waiting for connecting')
 
     def play(self):
-        """The function that runs the game logic. We get the hidden number and update the attributes of the game (number
-        attempts, and also pass the guessed number to the game) and send a notification to the second player that the
-        number is guessed the first player. While the attempt to guess is not equal to the guessed number, we ask it
-        from the second player. If the second the player guessed the number, we notify the players about this and
-        change their places (1 becomes 2, and 2 becomes 1) and we notify you about it. Then the game is repeated."""
+        """The function that runs the game logic. It gets the conceived number from the first player and update the
+        attributes of the game (number of attempts, and also pass the guessed number to the game) and send a
+        notification to the second player, that the number is conceived by the first player. While the attempt to guess
+        is not equal to the guessed number, the function asks the second player to try again. If the second the player
+        guessed the number, the function notifies the players about it, changes players number (1 becomes 2, and 2
+        becomes 1) and notifies them about it. Then the game is repeated."""
 
         while True:
             self.number = pickle.loads(self.server.recv(2048))
-            self.game.reset_attributes(self.number)
+            self.game.reset_attributes(self.number, self.attempts)
             self.server.sendto(pickle.dumps('True'), self.players[1])
 
             while not self.number == self.guess and self.game.attempts > 0:
@@ -55,11 +57,11 @@ class Server:
             self.server.sendto(pickle.dumps((2, 2,  self.max_number)), self.players[1])
 
     def main(self):
-        """The main method of the server side of the application. A server is created, then in a loop we start receiving
-        messages from players and check if they are on the list. Next, we look at how many players are connected. If
-        one, then send him the number of players and his number, and then wait for the second player. When the second
-        player connects, send to both players their number and the number of players in the game, after which the game
-        begins."""
+        """The main server side method of the application. Creates a server, then starts receiving messages from
+        players and checks if the players are in the list of players. Next, it looks at how many players are
+        connected. If there is only one player, then the server sends him the number of players and his number and
+        waiting for the second player to connect. When the second player connects, server sends to both players their
+        numbers and the number of players in the game, after which the game begins."""
 
         self.create_server()
         while True:
@@ -89,5 +91,5 @@ class Server:
 
 
 if __name__ == '__main__':
-    server = Server('', 5001, 120)
+    server = Server('', 5001, 100, 3)
     server.main()
