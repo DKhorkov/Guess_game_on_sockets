@@ -43,6 +43,7 @@ class Server:
         while True:
             self.number = pickle.loads(self.server.recv(2048))
             self.game.reset_attributes(self.number, self.attempts)
+            self.guess = None
             self.server.sendto(pickle.dumps('True'), self.players[1])
 
             while not self.number == self.guess and self.game.attempts > 0:

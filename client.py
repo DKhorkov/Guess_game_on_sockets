@@ -12,6 +12,7 @@ class Client:
         self.number_of_players = None
         self.max_number = None
         self.number_chosen = False
+        self.number_to_guess = None
 
     def connect_to_server(self):
         """A function that establishes a connection to the server."""
@@ -29,10 +30,10 @@ class Client:
             print('\nWaiting for 2nd player to guess the number...')
             message = pickle.loads(self.client.recv(2048))
             if message[0] == 'True':
-                if message[1] > 0:
+                if message[1] >= 0 and self.number_to_guess == message[3]:
                     print(f'\nAnother player guessed the num in {5 - message[1]} attempts. U lost...')
                 else:
-                    print("\nAnother player didn't guess the num. U won!")
+                    print(f"\nSecond player didn't guess the correct num. He thought, it was {message[3]}. U won!")
                 self.player_number, self.number_of_players, self.max_number = pickle.loads(self.client.recv(2048))
                 print("Now u'r player 2!\n")
                 break
@@ -61,10 +62,10 @@ class Client:
         range from zero to the maximum number, specified when the server was created."""
 
         while not user_input.isdecimal():
-            user_input = input(f'U made mistake. U should enter an integer number between 0 and {self.max_number} '
+            user_input = input(f'\nU made mistake. U should enter an integer number between 0 and {self.max_number} '
                                f'inclusively. Pls, try again: ')
         while not 0 <= int(user_input) <= self.max_number:
-            user_input = self.check_input(input(f'U made mistake. U should enter an integer number between 0 and '
+            user_input = self.check_input(input(f'\nU made mistake. U should enter an integer number between 0 and '
                                                 f'{self.max_number} inclusively. Pls, try again: '))
         return int(user_input)
 
@@ -79,9 +80,10 @@ class Client:
 
         while True:
             if self.player_number == 1 and self.number_of_players == 2:
-                number_to_guess = pickle.dumps(self.check_input(input(f'Enter an integer number to guess between 0 and '
-                                                                      f'{self.max_number} inclusively: ')))
-                self.client.send(number_to_guess)
+                self.number_to_guess = self.check_input(
+                    input(f'Enter an integer number between 0 and {self.max_number} '
+                          f'inclusively, which second player should guess: '))
+                self.client.send(pickle.dumps(self.number_to_guess))
                 self.p1_cycle()
 
             elif self.player_number == 2 and self.number_of_players == 2:
