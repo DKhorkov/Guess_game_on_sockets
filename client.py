@@ -27,7 +27,7 @@ class Client:
         negative, the first player waits for the next attempt from the second player."""
 
         while True:
-            print('\nWaiting for 2nd player to guess the number...')
+            print('\nWaiting for second player to guess the number...')
             message = pickle.loads(self.client.recv(2048))
             if message[0] == 'True':
                 if message[1] >= 0 and self.number_to_guess == message[3]:
@@ -87,7 +87,7 @@ class Client:
                 self.p1_cycle()
 
             elif self.player_number == 2 and self.number_of_players == 2:
-                print('Waiting for 1st player to choose the number...')
+                print('Waiting for first player to choose the number...')
                 self.number_chosen = bool(pickle.loads(self.client.recv(2048)))
                 print('\nNumber was chosen! Now, try to guess it!')
                 self.p2_cycle()
