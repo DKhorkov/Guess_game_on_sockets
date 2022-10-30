@@ -12,6 +12,7 @@ class Server:
         self.attempts = attempts
         self.game = Game(attempts)
         self.players = []
+        self.score = {}
         self.number = None
         self.guess = None
         self.send_num = True
@@ -22,7 +23,9 @@ class Server:
 
         if client_addr not in self.players:
             self.players.append(client_addr)
-            print(self.players)
+            self.score[client_addr[1]] = 0
+            print(f'Players list: {self.players}')
+            print(f'Current score: {self.score}\n')
 
     def create_server(self):
         """The function creates a server and starts waiting for users to connect."""
@@ -31,6 +34,14 @@ class Server:
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind((self.address, self.port))
         print(f'Server with address "{self.address}" and port "{self.port}" is running and waiting for connecting')
+
+    def update_score(self) -> None:
+        player_1 = self.players[0][1]
+        player_2 = self.players[1][1]
+        if self.number == self.guess:
+            self.score[player_2] += 1
+        else:
+            self.score[player_1] += 1
 
     def play(self):
         """The function that runs the game logic. It gets the conceived number from the first player and update the
@@ -52,10 +63,12 @@ class Server:
                 self.server.sendto(check_on_correctness, self.players[0])
                 self.server.sendto(check_on_correctness, self.players[1])
 
+            self.update_score()
             self.players[0], self.players[1] = self.players[1], self.players[0]
-            print(self.players)
-            self.server.sendto(pickle.dumps((1, 2,  self.max_number)), self.players[0])
-            self.server.sendto(pickle.dumps((2, 2,  self.max_number)), self.players[1])
+            print(f'Players list: {self.players}')
+            print(f'Current score: {self.score}\n')
+            self.server.sendto(pickle.dumps((1, 2,  self.max_number, self.score)), self.players[0])
+            self.server.sendto(pickle.dumps((2, 2,  self.max_number, self.score)), self.players[1])
 
     def main(self):
         """The main server side method of the application. Creates a server, then starts receiving messages from
@@ -71,14 +84,14 @@ class Server:
 
             self.client_id = self.client_addr[1]
             if pickle.loads(self.message) == '__join_server':
-                print(f'Client{self.client_id} has joined the chat!')
+                print(f'Client{self.client_id} has joined the chat!\n')
 
             if len(self.players) == 1:
-                self.server.sendto(pickle.dumps((1, 1, self.max_number)), self.players[0])
+                self.server.sendto(pickle.dumps((1, 1, self.max_number, self.players[0][1])), self.players[0])
                 continue
             elif len(self.players) == 2 and self.send_num:
-                self.server.sendto(pickle.dumps((1, 2, self.max_number)), self.players[0])
-                self.server.sendto(pickle.dumps((2, 2, self.max_number)), self.players[1])
+                self.server.sendto(pickle.dumps((1, 2, self.max_number, self.players[0][1])), self.players[0])
+                self.server.sendto(pickle.dumps((2, 2, self.max_number, self.players[1][1])), self.players[1])
                 self.send_num = False
                 continue
 
