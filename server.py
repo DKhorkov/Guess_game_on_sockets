@@ -1,4 +1,6 @@
 import socket
+import sys
+
 from game import Game
 import pickle
 
@@ -55,10 +57,16 @@ class Server:
             self.number = pickle.loads(self.server.recv(2048))
             self.game.reset_attributes(self.number, self.attempts)
             self.guess = None
+            if self.number == 'exit':
+                self.server.sendto(pickle.dumps(self.number), self.players[1])
+                break
             self.server.sendto(pickle.dumps('True'), self.players[1])
 
             while not self.number == self.guess and self.game.attempts > 0:
                 self.guess = pickle.loads(self.server.recv(2048))
+                if self.guess == 'exit':
+                    self.server.sendto(pickle.dumps(self.guess), self.players[0])
+                    sys.exit()
                 check_on_correctness = pickle.dumps(self.game.guess(self.guess))
                 self.server.sendto(check_on_correctness, self.players[0])
                 self.server.sendto(check_on_correctness, self.players[1])

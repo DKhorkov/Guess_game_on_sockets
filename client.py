@@ -1,4 +1,5 @@
 import socket
+import sys
 from time import sleep
 import pickle
 
@@ -40,6 +41,9 @@ class Client:
         while True:
             print('\n\U000023F3 Waiting for second player to guess the number... \U000023F3 ')
             message = pickle.loads(self.client.recv(2048))
+            if message == 'exit':
+                print('\n\U0001F6AA Second player left the game! You won! See you soon! \U0001F596 \n')
+                sys.exit()
             if message[0] == 'True':
                 if message[1] >= 0 and self.number_to_guess == message[3]:
                     print(f'\n\U0001F480 Another player guessed the num in {5 - message[1]} attempts. U lost... '
@@ -61,9 +65,14 @@ class Client:
         the second player tries to guess again."""
 
         while True:
-            guess = pickle.dumps(self.check_input(input('\U0001F3F9 Guess num: ')))
-            self.client.send(guess)
+            guess = self.check_input(input('\U0001F3F9 Guess the num or enter "exit" to end the game: '))
+            self.client.send(pickle.dumps(guess))
+            if guess == 'exit':
+                print('\n\U0001F596 Thanks for the game! See you soon! \U0001F596 \n')
+                sys.exit()
             message = pickle.loads(self.client.recv(2048))
+            if message == 'exit':
+                print('\n\U0001F6AA Second player left the game! See you soon! \U0001F596 \n')
             if message[0] == 'True':
                 print(f'\n\U0001F973 {message[2]} \U0001F973 ')
                 self.player_number, self.number_of_players, self.max_number, self.score = \
@@ -72,16 +81,20 @@ class Client:
                 break
             print(f'\n\U0001F514 {message[2]} \U0001F514 ')
 
-    def check_input(self, user_input: str) -> int:
+    def check_input(self, user_input: str) -> int or str:
         """This method checks the user's input for the validity of the data format: only integers in valid in
         range from zero to the maximum number, specified when the server was created."""
 
+        if user_input.lower() == 'exit':
+            return 'exit'
+
         while not user_input.isdecimal():
             user_input = input(f'\n\U000026D4 U made mistake. U should enter an integer number between 0 and '
-                               f'{self.max_number} inclusively. Pls, try again: ')
+                               f'{self.max_number} inclusively. Enter "exit" to end the game. Pls, try again: ')
         while not 0 <= int(user_input) <= self.max_number:
             user_input = self.check_input(input(f'\n\U000026D4 U made mistake. U should enter an integer number between'
-                                                f' 0 and {self.max_number} inclusively. Pls, try again: '))
+                                                f' 0 and {self.max_number} inclusively. Enter "exit" to end the game. '
+                                                f'Pls, try again: '))
         return int(user_input)
 
     def main(self):
@@ -98,13 +111,20 @@ class Client:
             if self.player_number == 1 and self.number_of_players == 2:
                 self.number_to_guess = self.check_input(
                     input(f'\U0001F6E1 Enter an integer number between 0 and {self.max_number} '
-                          f'inclusively, which second player should guess: '))
+                          f'inclusively, which second player should guess or enter "exit" to end the game: '))
                 self.client.send(pickle.dumps(self.number_to_guess))
+                if self.number_to_guess == 'exit':
+                    print('\n\U0001F596 Thanks for the game! See you soon! \U0001F596 \n')
+                    sys.exit()
                 self.p1_cycle()
 
             elif self.player_number == 2 and self.number_of_players == 2:
                 print('\U000023F3 Waiting for first player to choose the number... \U000023F3 ')
-                self.number_chosen = bool(pickle.loads(self.client.recv(2048)))
+                num = pickle.loads(self.client.recv(2048))
+                if num == 'exit':
+                    print('\n\U0001F6AA First player left the game! See you soon! \U0001F596 \n')
+                    sys.exit()
+                self.number_chosen = bool(num)
                 print('\n\U0001F3AF Number was chosen! Now, try to guess it! \U0001F3AF ')
                 self.p2_cycle()
 
