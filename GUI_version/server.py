@@ -23,7 +23,7 @@ DOCOPT_USAGE = f"""
 
 class Server:
 
-    def __init__(self, address: str, port: int, max_number: int, attempts: int):
+    def __init__(self, address: str, port: int, max_number: int = 100, attempts: int = 5):
         self.address = address
         self.port = port
         self.max_number = max_number
@@ -76,6 +76,8 @@ class Server:
             if self.number == 'exit':
                 self.server.sendto(pickle.dumps(self.number), self.players[1])
                 break
+            elif self.number == 'get_data':
+                continue
             self.server.sendto(pickle.dumps('True'), self.players[1])
 
             while not self.number == self.guess and self.game.attempts > 0:
