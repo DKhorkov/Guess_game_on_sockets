@@ -1,6 +1,5 @@
 import pickle
 import socket
-import sys
 import tkinter
 from tkinter import ttk, END
 from tkinter import messagebox as msg
@@ -32,6 +31,7 @@ class Main:
         self.last_message = None
         self.last_message_for_p2 = None
         self.number_is_guessed = False
+        self.need_to_conceive_the_num = True
 
     def __game_window(self):
         self.game_window = tkinter.Tk()
@@ -67,15 +67,11 @@ class Main:
 
     def __user_input_loop(self):
         if self.user_input.get() != '':
-            self.log.insert(0.0, 'You: ' + self.user_input.get() + '\n\n')
+            self.log.insert(0.0, 'You: ' + self.user_input.get() + PARAGRAPHS)
             self.number_to_guess = self.__check_input(self.user_input.get())
             self.num_after_check = self.number_to_guess
             self.user_input.set('')
         self.game_window.after(1000, self.__user_input_loop)
-
-    # def sendproc(self, event):
-    #     self.log.insert(0.0, self.user_input.get() + ':' + '\n')
-    #     self.user_input.set('')
 
     def __create_server_label(self):
         self.create_server_string = tkinter.StringVar()
@@ -149,6 +145,7 @@ class Main:
     def __create_server(self):
         """Функция пытается создать сервер с полученными аргументами. Если сервер запускается, выводится лейбл
         с уведомлением юзера об этом. Если происходит ошибка, то выводится уведомление в отдельном мини-окне."""
+
         addr = self.server_address_entry.get()
         port = self.server_port_entry.get()
         self.max_num = self.server_max_num_entry.get()
@@ -174,10 +171,7 @@ class Main:
         except Exception as e:
             msg.showerror('Server creation error!', str(e))
         else:
-            # self.__game_window()
             self.__connect_to_server(addr, port)
-            # self.msg.bind('<Return>', self.sendproc)
-            # self.game_window.after(1000, self.__user_input_loop)
 
     def __print_score(self):
         """Function, which prints current score in console."""
@@ -191,7 +185,7 @@ class Main:
     def __connect_to_server(self, addr: str = None, port: str = None):
         """Функция пытается подключиться к серверу с полученными аргументами. Если подключение успешно, создается новое
         окно ГУИ с игрой. Если происходит ошибка, то выводится уведомление в отдельном мини-окне."""
-        self.__game_window()
+
         if addr is None or port is None:
             addr = self.client_address_entry.get()
             port = self.client_port_entry.get()
@@ -205,6 +199,7 @@ class Main:
                 self.client_app.send(pickle.dumps('__join_server'))
                 self.player_number, self.number_of_players, self.max_number, self.player_id = \
                     pickle.loads(self.client_app.recv(2048))
+                self.__game_window()
                 self.game_window.after(1000, self.__main_client)
             except:
                 return msg.showerror('Connection error!', 'Something went wrong. Please, try again and check, if '
@@ -219,28 +214,30 @@ class Main:
         player waits for the second player trying to guess the number. If second player guesses the number, the first
         player will get a positive response from the server -> change places with the second player. If the answer is
         negative, the first player waits for the next attempt from the second player."""
+
         if self.player_number == 1:
             try:
-                data = 'Waiting for second player to guess the number...\n\n'
+                data = f'Waiting for second player to guess the number...{PARAGRAPHS}'
                 if data != self.last_message:
                     self.log.insert(0.0, data)
                     self.last_message = data
                 message = pickle.loads(self.client_app.recv(2048))
                 if message == 'exit':
-                    data = 'Second player left the game! You won! See you soon!\n\n'
+                    data = f'Second player left the game! You won! See you soon!{PARAGRAPHS}'
                     if data != self.last_message:
                         self.log.insert(0.0, data)
                         self.last_message = data
                     return
                 if message[0] == 'True':
                     if message[1] >= 0 and self.num_after_check == message[3]:
-                        data = f'\n\nAnother player guessed the num in {5 - message[1]} attempts. U lost...\n\n'
+                        data = f'{PARAGRAPHS}Another player guessed the num in {5 - message[1]} attempts. ' \
+                               f'U lost...{PARAGRAPHS}'
                         if data != self.last_message:
                             self.log.insert(0.0, data)
                             self.last_message = data
                     else:
                         data = f"You won! Second player didn't guess the correct num. He thought, " \
-                               f"it was {message[3]}.\n\n"
+                               f"it was {message[3]}.{PARAGRAPHS}"
                         if data != self.last_message:
                             self.log.insert(0.0, data)
                             self.last_message = data
@@ -250,7 +247,7 @@ class Main:
                     self.number_is_guessed = False
                     return
                 data = f"Second player didn't guess the correct num. He thought, it was {message[3]} and now  " \
-                       f"has {message[1]} attempts!\n\n"
+                       f"has {message[1]} attempts!{PARAGRAPHS}"
                 if data != self.last_message:
                     self.log.insert(0.0, data)
                     self.last_message = data
@@ -264,9 +261,10 @@ class Main:
         sends it to the server. Then the second player waits for a response from the server. If the answer is positive,
         then the second player won -> wait for a response from the server, to change places. If the answer is negative,
         the second player tries to guess again."""
+
         if self.player_number == 2:
             try:
-                data = f'\nGuess the num between 0 and {self.max_number} or enter "exit" to end the game:\n\n'
+                data = f'\nGuess the num between 0 and {self.max_number} or enter "exit" to end the game:{PARAGRAPHS}'
                 if data != self.last_message:
                     self.log.insert(0.0, data)
                     self.last_message = data
@@ -274,14 +272,13 @@ class Main:
                 if self.number_to_guess is not None:
                     self.client_app.send(pickle.dumps(self.number_to_guess))
                     if self.number_to_guess == 'exit':
-                        self.log.insert(0.0, 'Thanks for the game! See you soon!\n\n')
+                        self.log.insert(0.0, f'Thanks for the game! See you soon!{PARAGRAPHS}')
                         self.number_to_guess = None
                     else:
                         self.number_to_guess = None
-                        # self.game_window.after(1000, self.__p2_cycle)
                 message = pickle.loads(self.client_app.recv(2048))
                 if message == 'exit':
-                    data = 'First player left the game! You won! See you soon!\n\n'
+                    data = f'First player left the game! You won! See you soon!{PARAGRAPHS}'
                     if data != self.last_message:
                         self.log.insert(0.0, data)
                         self.last_message = data
@@ -293,13 +290,12 @@ class Main:
                     self.player_number, self.number_of_players, self.max_number, self.score = \
                         pickle.loads(self.client_app.recv(2048))
                     self.__print_score()
+                    self.need_to_conceive_the_num = True
                     return
                 data = f'\n{message[2]}\n'
                 if data != self.last_message_for_p2:
                     self.log.insert(0.0, data)
                     self.last_message_for_p2 = data
-                # self.game_window.after(1000, self.__p2_cycle)
-                # return
             except BlockingIOError:
                 self.game_window.after(1000, self.__p2_cycle)
                 return
@@ -309,24 +305,27 @@ class Main:
         """The main function of the client side. Connects to the server and sends a start message. Next gets player
         number and number of players in the game. If we are the only player, send a request to update information
         about the players on the server. If there are two players, the game starts."""
+
         self.client_app.setblocking(False)
         try:
             if self.player_number == 1 and self.number_of_players == 2:
                 data = f'Enter an integer number between 0 and {self.max_number} inclusively, which second player ' \
-                       f'should guess or enter "exit" to end the game:\n\n'
+                       f'should guess or enter "exit" to end the game:{PARAGRAPHS}'
                 self.game_window.after(1000, self.__user_input_loop)
-                if self.number_to_guess is not None:
+                if self.number_to_guess is not None and self.need_to_conceive_the_num:
                     self.client_app.send(pickle.dumps(self.number_to_guess))
+                    self.need_to_conceive_the_num = False
                     if self.number_to_guess == 'exit':
-                        self.log.insert(0.0, 'Thanks for the game! See you soon!\n\n')
+                        self.log.insert(0.0, f'Thanks for the game! See you soon!{PARAGRAPHS}')
                         self.number_to_guess = None
-                        # self.game_window.after(1000, self.__p1_cycle)
                     else:
                         self.number_to_guess = None
                         self.game_window.after(1000, self.__p1_cycle)
+                else:
+                    self.number_to_guess = None
 
             elif self.player_number == 2 and self.number_of_players == 2:
-                data = 'Waiting for first player to choose the number...\n\n'
+                data = f'Waiting for first player to choose the number...{PARAGRAPHS}'
                 if data != self.notification:
                     self.log.insert(0.0, data)
                     self.notification = data
@@ -334,20 +333,16 @@ class Main:
                     num = pickle.loads(self.client_app.recv(2048))
                     self.number_is_guessed = True
                     if num == 'exit':
-                        self.log.insert(0.0, '\nFirst player left the game! See you soon!\n\n')
+                        self.log.insert(0.0, f'\nFirst player left the game! See you soon!{PARAGRAPHS}')
                     else:
-                        # data = '\nNumber was chosen! Now, try to guess it!\n\n'
-                        self.log.insert(0.0, '\nNumber was chosen! Now, try to guess it!\n\n')
+                        self.log.insert(0.0, f'\nNumber was chosen! Now, try to guess it!{PARAGRAPHS}')
                         self.game_window.after(1000, self.__p2_cycle)
                 else:
                     self.game_window.after(1000, self.__p2_cycle)
 
             else:
-                data = 'Waiting for second player...\n\n'
+                data = f'Waiting for second player...{PARAGRAPHS}'
                 self.client_app.send(pickle.dumps('get_data'))
-                # if self.notification is None or self.notification != data:
-                #     self.notification = data
-                #     self.log.insert(0.0, self.notification)
                 self.player_number, self.number_of_players, self.max_number, self.player_id = \
                     pickle.loads(self.client_app.recv(2048))
             if self.notification is None or self.notification != data:
