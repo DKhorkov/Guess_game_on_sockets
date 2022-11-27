@@ -39,12 +39,21 @@ class Main:
         self.game_window.geometry(f'{GAME_WINDOW_WIDTH}x{GAME_WINDOW_HEIGHT}')
         self.user_input = tkinter.StringVar()
         self.log = tkinter.Text(self.game_window)
-        self.msg = tkinter.Entry(self.game_window, textvariable=self.user_input)
-        self.msg.pack(side='bottom', fill='x', expand=1, ipady=20)
-        self.log.pack(side='top', fill='both', expand=1)
-        self.send_message_button = tkinter.Button(self.game_window, text='Send', width=17,
+        self.log.place(x=0, y=0, width=900, height=440)
+        self.msg_info_label = tkinter.Label(self.game_window, text='Enter your data here:')
+        self.msg_info_label.place(x=0, y=450, width=170, height=40)
+        self.msg = tkinter.Entry(self.game_window, textvariable=self.user_input, borderwidth=4)
+        self.msg.place(x=170, y=450, width=600, height=40, bordermode='outside')
+
+        # Создаем скроллбар и прикручиваем его к логу:
+        self.scrollbar = tkinter.Scrollbar(self.log, orient=tkinter.VERTICAL)
+        self.scrollbar.pack(side='right', fill=tkinter.Y)
+        self.scrollbar.config(command=self.log.yview)
+        self.log.config(yscrollcommand=self.scrollbar.set)
+
+        self.send_message_button = tkinter.Button(self.game_window, text='Send data', width=17,
                                                   command=self.__send_message)
-        self.send_message_button.pack(side='bottom')
+        self.send_message_button.place(x=780, y=450, width=100, height=40)
 
     def __send_message(self):
         self.user_input.set(self.msg.get())
@@ -108,15 +117,15 @@ class Main:
         self.server_max_num_label.place(x=0, y=140, height=40)
         self.server_attempts_label.place(x=0, y=200, height=40)
 
-        self.server_address_entry = tkinter.Entry(self.server, width=40)
-        self.server_port_entry = tkinter.Entry(self.server, width=40)
-        self.server_max_num_entry = tkinter.Entry(self.server, width=40)
-        self.server_attempts_entry = tkinter.Entry(self.server, width=40)
+        self.server_address_entry = tkinter.Entry(self.server, width=40, borderwidth=4)
+        self.server_port_entry = tkinter.Entry(self.server, width=40, borderwidth=4)
+        self.server_max_num_entry = tkinter.Entry(self.server, width=40, borderwidth=4)
+        self.server_attempts_entry = tkinter.Entry(self.server, width=40, borderwidth=4)
 
-        self.server_address_entry.place(x=500, y=20, height=40)
-        self.server_port_entry.place(x=500, y=80, height=40)
-        self.server_max_num_entry.place(x=500, y=140, height=40)
-        self.server_attempts_entry.place(x=500, y=200, height=40)
+        self.server_address_entry.place(x=500, y=20, height=40, bordermode='outside')
+        self.server_port_entry.place(x=500, y=80, height=40, bordermode='outside')
+        self.server_max_num_entry.place(x=500, y=140, height=40, bordermode='outside')
+        self.server_attempts_entry.place(x=500, y=200, height=40, bordermode='outside')
 
         self.create_server_button = tkinter.Button(self.server, text='Create server', width=17,
                                                    command=self.__create_server)
@@ -132,11 +141,11 @@ class Main:
         self.client_address_label.place(x=0, y=20, height=40)
         self.client_port_label.place(x=0, y=80, height=40)
 
-        self.client_address_entry = tkinter.Entry(self.client, width=40)
-        self.client_port_entry = tkinter.Entry(self.client, width=40)
+        self.client_address_entry = tkinter.Entry(self.client, width=40, borderwidth=4)
+        self.client_port_entry = tkinter.Entry(self.client, width=40, borderwidth=4)
 
-        self.client_address_entry.place(x=500, y=20, height=40)
-        self.client_port_entry.place(x=500, y=80, height=40)
+        self.client_address_entry.place(x=500, y=20, height=40, bordermode='outside')
+        self.client_port_entry.place(x=500, y=80, height=40, bordermode='outside')
 
         self.client_connection_button = tkinter.Button(self.client, text='Connect to server', width=17,
                                                        command=self.__connect_to_server)
@@ -332,6 +341,8 @@ class Main:
                 if not self.number_is_guessed:
                     num = pickle.loads(self.client_app.recv(2048))
                     self.number_is_guessed = True
+                    self.number_to_guess = None
+                    self.user_input.set('')
                     if num == 'exit':
                         self.log.insert(0.0, f'\nFirst player left the game! See you soon!{PARAGRAPHS}')
                     else:
@@ -345,6 +356,7 @@ class Main:
                 self.client_app.send(pickle.dumps('get_data'))
                 self.player_number, self.number_of_players, self.max_number, self.player_id = \
                     pickle.loads(self.client_app.recv(2048))
+                self.user_input.set('')
             if self.notification is None or self.notification != data:
                 self.notification = data
                 self.log.insert(0.0, self.notification)
@@ -353,7 +365,8 @@ class Main:
             return
         self.game_window.after(1000, self.__main_client)
 
-    def start(self):
+    @staticmethod
+    def start():
         tkinter.mainloop()
 
 
