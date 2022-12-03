@@ -31,7 +31,7 @@ class Game:
             annotation = f'Almost, but still not enough :) Number of attempts left: {self.attempts}'
         return annotation
 
-    def guess(self, guessed_num: int) -> tuple[str, int, str, int]:
+    def guess(self, guessed_num: int) -> tuple[str, int, str, int, int]:
         """The main function of the game, which checks whether the attempt of the second user to guess the conceived
         number is correct. Depending on this, the function returns 'True' or 'False' as the first
         argument. Also function always returns the number of attempts left, an annotation of how close the user is to
@@ -41,11 +41,11 @@ class Game:
 
         if guessed_num != self.number and self.attempts > 0:
             annotation = self.check_range(self.number, guessed_num)
-            return 'False', self.attempts, annotation, guessed_num
+            return 'False', self.attempts, annotation, guessed_num, self.max_attempts
         elif guessed_num == self.number and self.attempts >= 0:
             annotation = f'Congratulations, you won in {self.max_attempts - self.attempts} attempts by guessing the ' \
                          f'number {self.number}, conceived by the first player!'
-            return 'True', self.attempts, annotation, guessed_num
+            return 'True', self.attempts, annotation, guessed_num, self.max_attempts
         elif self.attempts <= 0:
             annotation = f'You lost because you used up all your attempts! The number was {self.number}!'
-            return 'True', self.attempts, annotation, guessed_num
+            return 'True', self.attempts, annotation, guessed_num, self.max_attempts

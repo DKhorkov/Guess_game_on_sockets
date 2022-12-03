@@ -1,29 +1,14 @@
 import socket
 import sys
-from docopt import docopt
 import pickle
 
 from game import Game
 from configs import ATTEMPTS, MAX_NUMBER_TO_CONCEIVE
 
 
-DOCOPT_USAGE = f"""
-    Usage:
-        server.py -h | --help
-        server.py --ip_address=<nums> --port=<int> [--max_number=<int>] [--attempts=<int>]
-
-    Options:
-        -h --help               Show this screen.
-        --ip_address=<nums>     Address of server (Example:192.168.0.108).
-        --port=<int>            Port of server (Example: 5000).
-        --max_number=<int>      Max nuber to choose [default: {MAX_NUMBER_TO_CONCEIVE}].
-        --attempts=<int>        Number of attempts to guess the number [default: {ATTEMPTS}].
-"""
-
-
 class Server:
 
-    def __init__(self, address: str, port: int, max_number: int = 100, attempts: int = 5):
+    def __init__(self, address: str, port: int, max_number: int = MAX_NUMBER_TO_CONCEIVE, attempts: int = ATTEMPTS):
         self.address = address
         self.port = port
         self.max_number = max_number
@@ -45,13 +30,16 @@ class Server:
             print(f'Players list: {self.players}')
             print(f'Current score: {self.score}\n')
 
-    def create_server(self):
+    def create_server(self, queue):
         """The function creates a server and starts waiting for users to connect."""
-
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind((self.address, self.port))
-        print(f'Server with address "{self.address}" and port "{self.port}" is running and waiting for connecting')
+        try:
+            self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.server.bind((self.address, self.port))
+            queue.put(True)
+            print(f'Server with address "{self.address}" and port "{self.port}" is running and waiting for connecting')
+        except:
+            queue.put(False)
 
     def update_score(self) -> None:
         player_1 = self.players[0][1]
@@ -96,14 +84,14 @@ class Server:
             self.server.sendto(pickle.dumps((1, 2,  self.max_number, self.score)), self.players[0])
             self.server.sendto(pickle.dumps((2, 2,  self.max_number, self.score)), self.players[1])
 
-    def main(self):
+    def main(self, queue):
         """The main server side method of the application. Creates a server, then starts receiving messages from
         players and checks if the players are in the list of players. Next, it looks at how many players are
         connected. If there is only one player, then the server sends him the number of players and his number and
         waiting for the second player to connect. When the second player connects, server sends to both players their
         numbers and the number of players in the game, after which the game begins."""
 
-        self.create_server()
+        self.create_server(queue)
         while True:
             self.message, self.client_addr = self.server.recvfrom(2048)
             self.check_client_on_existence(self.client_addr)
@@ -128,9 +116,3 @@ class Server:
                 self.play()
 
         self.server.close()
-
-
-if __name__ == '__main__':
-    args = docopt(DOCOPT_USAGE)
-    server = Server(args['--ip_address'], int(args['--port']), int(args['--max_number']), int(args['--attempts']))
-    server.main()

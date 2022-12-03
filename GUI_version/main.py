@@ -3,8 +3,9 @@ import socket
 import tkinter
 from tkinter import ttk, END
 from tkinter import messagebox as msg
-from subprocess import Popen, PIPE, STDOUT
+from multiprocessing import Process, Queue
 
+from server import Server
 from configs import START_WINDOW_HEIGHT, START_WINDOW_TITLE, START_WINDOW_WIDTH, ATTEMPTS, MAX_NUMBER_TO_CONCEIVE, \
     GAME_WINDOW_TITLE, GAME_WINDOW_WIDTH, GAME_WINDOW_HEIGHT, CONNECTION_TO_SERVER_TIMEOUT, TABS, PARAGRAPHS
 
@@ -12,7 +13,6 @@ from configs import START_WINDOW_HEIGHT, START_WINDOW_TITLE, START_WINDOW_WIDTH,
 class Main:
 
     def __init__(self):
-        """Создаем стартовый ГУИ, добавляем ему название и размеры."""
 
         self.start_window = tkinter.Tk()
         self.start_window.title(START_WINDOW_TITLE)
@@ -33,67 +33,22 @@ class Main:
         self.number_is_guessed = False
         self.need_to_conceive_the_num = True
 
-    def __game_window(self):
-        self.game_window = tkinter.Tk()
-        self.game_window.title(GAME_WINDOW_TITLE)
-        self.game_window.geometry(f'{GAME_WINDOW_WIDTH}x{GAME_WINDOW_HEIGHT}')
-        self.user_input = tkinter.StringVar()
-        self.log = tkinter.Text(self.game_window)
-        self.log.place(x=0, y=0, width=900, height=440)
-        self.msg_info_label = tkinter.Label(self.game_window, text='Enter your data here:')
-        self.msg_info_label.place(x=0, y=450, width=170, height=40)
-        self.msg = tkinter.Entry(self.game_window, textvariable=self.user_input, borderwidth=4)
-        self.msg.place(x=170, y=450, width=600, height=40, bordermode='outside')
-
-        # Создаем скроллбар и прикручиваем его к логу:
-        self.scrollbar = tkinter.Scrollbar(self.log, orient=tkinter.VERTICAL)
-        self.scrollbar.pack(side='right', fill=tkinter.Y)
-        self.scrollbar.config(command=self.log.yview)
-        self.log.config(yscrollcommand=self.scrollbar.set)
-
-        self.send_message_button = tkinter.Button(self.game_window, text='Send data', width=17,
-                                                  command=self.__send_message)
-        self.send_message_button.place(x=780, y=450, width=100, height=40)
-
-    def __send_message(self):
-        self.user_input.set(self.msg.get())
-        self.msg.delete(0, END)
-
-    def __check_input(self, user_input: str) -> int or str:
-        """This method checks the user's input for the validity of the data format: only integers in valid in
-        range from zero to the maximum number, specified when the server was created."""
-
-        if user_input.lower() == 'exit':
-            return 'exit'
-        if not user_input.isdecimal():
-            self.log.insert(0.0, '\nError. You need to input a number! Please, try again!\n')
-            return None
-        if not 0 <= int(user_input) <= self.max_number:
-            self.log.insert(0.0, f'\nError. You need to input a number between 0 and {self.max_number} inclusively! '
-                                 f'Please, try again!\n')
-            return None
-        return int(user_input)
-
-    def __user_input_loop(self):
-        if self.user_input.get() != '':
-            self.log.insert(0.0, 'You: ' + self.user_input.get() + PARAGRAPHS)
-            self.number_to_guess = self.__check_input(self.user_input.get())
-            self.num_after_check = self.number_to_guess
-            self.user_input.set('')
-        self.game_window.after(1000, self.__user_input_loop)
-
     def __create_server_label(self):
+        """Function generates label to notify user about successful server creation."""
+
         self.create_server_string = tkinter.StringVar()
         self.create_server_label = tkinter.Label(self.server, textvariable=self.create_server_string)
         self.create_server_label.place(x=200, y=280, width=400, height=50)
 
     def __connection_to_server_label(self):
+        """Function generates label to notify user about successful connection to the server."""
+
         self.connection_to_server_string = tkinter.StringVar()
         self.connection_to_server_label = tkinter.Label(self.client, textvariable=self.connection_to_server_string)
         self.connection_to_server_label.place(x=200, y=180, width=400, height=50)
 
     def __create_tabs(self):
-        """Создаем вкладки для сервера и клиента, чтобы развивать в дальнейшем."""
+        """Function creates tabs for server and client for further interactions."""
 
         self.tabs_panel = ttk.Notebook(self.start_window)
         self.server = ttk.Frame(self.tabs_panel)
@@ -103,8 +58,8 @@ class Main:
         self.tabs_panel.pack(expand=1, fill='both')  # необходимы оба параметра для корректного создания вкладок
 
     def __fill_server_tab(self):
-        """Создает текстовые аннотации и поля для заполнения адреса и порта сервера, который необходимо создать. Также
-        создает кнопку, которая создает соединение."""
+        """Creates text annotations and fields to populate the address and port of the server to be created. Also
+         creates a button that creates a connection."""
 
         self.server_address_label = tkinter.Label(self.server, text='Enter sever address (example: 192.168.0.108): ')
         self.server_port_label = tkinter.Label(self.server, text='Enter sever port (example: 5000): ')
@@ -132,8 +87,8 @@ class Main:
         self.create_server_button.place(x=580, y=250)
 
     def __fill_client_tab(self):
-        """Создает текстовые аннотации и поля для заполнения адреса и порта сервера, к которому будет подключаться
-        клиент. Также создает кнопку, которая создает соединение."""
+        """Creates text annotations and fields to fill in the address and port of the server to which it will connect
+         client. Also creates a button that creates a connection."""
 
         self.client_address_label = tkinter.Label(self.client, text='Enter sever address to connect to '
                                                                     '(example: 192.168.0.108): ')
@@ -152,8 +107,9 @@ class Main:
         self.client_connection_button.place(x=580, y=150)
 
     def __create_server(self):
-        """Функция пытается создать сервер с полученными аргументами. Если сервер запускается, выводится лейбл
-        с уведомлением юзера об этом. Если происходит ошибка, то выводится уведомление в отдельном мини-окне."""
+        """The function tries to create a server with the given arguments. If the server starts, the label is displayed
+         with the notification of the user about it. If an error occurs, a notification is displayed in a separate
+         messagebox."""
 
         addr = self.server_address_entry.get()
         port = self.server_port_entry.get()
@@ -163,17 +119,20 @@ class Main:
             if addr == '' or port == '':
                 return msg.showerror('Server creation error!', 'Invalid IP address and/or port! Please, try again!')
             if self.max_num != '' and self.attempts != '':
-                server_start_command = f'python server.py --ip_address={addr} --port={port} ' \
-                                       f'--max_number={self.max_num} --attempts={self.attempts}'
+                server = Server(addr, int(port), int(self.max_num), int(self.attempts))
             elif self.max_num != '':
-                server_start_command = f'python server.py --ip_address={addr} --port={port} --max_number={self.max_num}'
+                server = Server(addr, int(port), int(self.max_num))
             elif self.attempts != '':
-                server_start_command = f'python server.py --ip_address={addr} --port={port} --attempts={self.attempts}'
+                server = Server(addr, int(port), attempts=int(self.attempts))
             else:
-                server_start_command = f'python server.py --ip_address={addr} --port={port}'
-            data = Popen(server_start_command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
-            popen_out = data.stdout.readline().decode('utf-8')
-            if 'Traceback' in popen_out:
+                server = Server(addr, int(port))
+
+            queue = Queue()
+            server_process = Process(target=server.main, args=(queue, ))
+            server_process.start()
+            server_running_status = queue.get()
+
+            if not server_running_status:
                 return msg.showerror('Server creation error!', 'Something went wrong. Please, try again and check, if '
                                                                'all data was entered correctly!')
             self.create_server_string.set(f'Created server with IP {addr} and port {port}.')
@@ -182,18 +141,10 @@ class Main:
         else:
             self.__connect_to_server(addr, port)
 
-    def __print_score(self):
-        """Function, which prints current score in console."""
-
-        opponent_id = [key for key in self.score.keys() if key != self.player_id][0]
-        self.log.insert(0.0, f'{PARAGRAPHS + TABS}Current score:\n'
-                             f'{TABS}You: {self.score[self.player_id]}\n'
-                             f'{TABS}Opponent: {self.score[opponent_id]}{PARAGRAPHS}')
-        self.log.insert(0.0, f"\nNow u'r player {self.player_number}!{PARAGRAPHS}")
-
     def __connect_to_server(self, addr: str = None, port: str = None):
-        """Функция пытается подключиться к серверу с полученными аргументами. Если подключение успешно, создается новое
-        окно ГУИ с игрой. Если происходит ошибка, то выводится уведомление в отдельном мини-окне."""
+        """The function attempts to connect to the server with the given arguments. If the connection is successful,
+        a new one is created GUI window with the game. If an error occurs, a notification is displayed in a
+        separate messagebox."""
 
         if addr is None or port is None:
             addr = self.client_address_entry.get()
@@ -218,6 +169,71 @@ class Main:
         except Exception as e:
             msg.showerror('Connection error!', str(e))
 
+    def __game_window(self):
+        """The function creates a game window as soon as the user has connected to the server. In this window there is
+         the main process of the game, the interaction of the first and second players through the server."""
+
+        self.game_window = tkinter.Tk()
+        self.game_window.title(GAME_WINDOW_TITLE)
+        self.game_window.geometry(f'{GAME_WINDOW_WIDTH}x{GAME_WINDOW_HEIGHT}')
+        self.user_input = tkinter.StringVar()
+        self.log = tkinter.Text(self.game_window)
+        self.log.place(x=0, y=0, width=900, height=440)
+        self.msg_info_label = tkinter.Label(self.game_window, text='Enter your data here:')
+        self.msg_info_label.place(x=0, y=450, width=170, height=40)
+        self.msg = tkinter.Entry(self.game_window, textvariable=self.user_input, borderwidth=4)
+        self.msg.place(x=170, y=450, width=600, height=40, bordermode='outside')
+
+        # Создаем скроллбар и прикручиваем его к логу:
+        self.scrollbar = tkinter.Scrollbar(self.log, orient=tkinter.VERTICAL)
+        self.scrollbar.pack(side='right', fill=tkinter.Y)
+        self.scrollbar.config(command=self.log.yview)
+        self.log.config(yscrollcommand=self.scrollbar.set)
+
+        self.send_message_button = tkinter.Button(self.game_window, text='Send data', width=17,
+                                                  command=self.__send_message)
+        self.send_message_button.place(x=780, y=450, width=100, height=40)
+
+    def __check_input(self, user_input: str) -> int or str:
+        """This method checks the user's input for the validity of the data format: only integers in valid in
+        range from zero to the maximum number, specified when the server was created."""
+
+        if user_input.lower() == 'exit':
+            return 'exit'
+        if not user_input.isdecimal():
+            self.log.insert(0.0, '\nError. You need to input a number! Please, try again!\n')
+            return None
+        if not 0 <= int(user_input) <= self.max_number:
+            self.log.insert(0.0, f'\nError. You need to input a number between 0 and {self.max_number} inclusively! '
+                                 f'Please, try again!\n')
+            return None
+        return int(user_input)
+
+    def __user_input_loop(self):
+        """A function that processes a StringVar and renders the user's input into a text box."""
+
+        if self.user_input.get() != '':
+            self.log.insert(0.0, 'You: ' + self.user_input.get() + PARAGRAPHS)
+            self.number_to_guess = self.__check_input(self.user_input.get())
+            self.num_after_check = self.number_to_guess
+            self.user_input.set('')
+        self.game_window.after(1000, self.__user_input_loop)
+
+    def __send_message(self):
+        """A function that passes the data entered by the user into a StringVar."""
+
+        self.user_input.set(self.msg.get())
+        self.msg.delete(0, END)
+
+    def __print_score(self):
+        """Function, which prints current score in console."""
+
+        opponent_id = [key for key in self.score.keys() if key != self.player_id][0]
+        self.log.insert(0.0, f'{PARAGRAPHS + TABS}Current score:\n'
+                             f'{TABS}You: {self.score[self.player_id]}\n'
+                             f'{TABS}Opponent: {self.score[opponent_id]}{PARAGRAPHS}')
+        self.log.insert(0.0, f"\nNow u'r player {self.player_number}!{PARAGRAPHS}")
+
     def __p1_cycle(self):
         """Loop for the first player. The first player conceives a number and sends it to the server. Then the first
         player waits for the second player trying to guess the number. If second player guesses the number, the first
@@ -239,8 +255,8 @@ class Main:
                     return
                 if message[0] == 'True':
                     if message[1] >= 0 and self.num_after_check == message[3]:
-                        data = f'{PARAGRAPHS}Another player guessed the num in {5 - message[1]} attempts. ' \
-                               f'U lost...{PARAGRAPHS}'
+                        data = f'{PARAGRAPHS}Another player guessed the num in {message[4] - message[1]} ' \
+                               f'attempts. U lost...{PARAGRAPHS}'
                         if data != self.last_message:
                             self.log.insert(0.0, data)
                             self.last_message = data
